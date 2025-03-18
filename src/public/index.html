@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Research</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-left">
+        <img src="book-icon.svg" alt="Deep Research" class="logo-icon">
+        <span class="app-title">Deep Research</span>
+      </div>
+      <div class="header-right">
+        <a href="https://github.com/mendable/open-deep-research" class="header-link">Star on GitHub</a>
+        <a href="https://firecrawl.dev" class="header-link">Get Firecrawl API Key</a>
+      </div>
+    </header>
+
+    <main>
+      <div class="main-content">
+        <div id="research-prompt" class="prompt-container">
+          <div id="welcome-message" class="welcome-message">
+            <h1>Deep Research</h1>
+            <p>Ask a complex question and get a thoroughly researched answer</p>
+            <div class="welcome-examples">
+              <p class="example-heading">Example questions:</p>
+              <ul class="example-list">
+                <li>What are the most promising approaches to fusion energy?</li>
+                <li>How has quantum computing advanced in the last 3 years?</li>
+                <li>What are the most effective strategies for carbon capture?</li>
+              </ul>
+            </div>
+          </div>
+          <div id="research-query" class="research-query"></div>
+        </div>
+
+        <div id="research-status" class="status-container hidden">
+          <div class="status-header">
+            <div class="status-icon">🔍</div>
+            <div id="status-message">Research in progress...</div>
+            <div id="progress-percentage">0%</div>
+          </div>
+          <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar"></div>
+          </div>
+          <div class="status-time">Time until timeout: <span id="timeout-counter">5:00</span></div>
+        </div>
+
+        <div id="research-results" class="results-container hidden">
+          <div class="results-header">
+            <div class="results-icon">🔍</div>
+            <div id="results-title"></div>
+          </div>
+          <div id="results-content" class="results-content"></div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <button id="activity-tab" class="tab-button active">Activity</button>
+          <button id="sources-tab" class="tab-button">Sources</button>
+        </div>
+        <div id="activity-panel" class="sidebar-panel">
+          <ul id="activity-list" class="activity-list"></ul>
+        </div>
+        <div id="sources-panel" class="sidebar-panel hidden">
+          <ul id="sources-list" class="sources-list"></ul>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="message-input-container">
+        <input type="text" id="query-input" class="message-input" placeholder="What would you like to research?">
+        <button id="submit-button" class="submit-button">
+          <img src="send-icon.svg" alt="Send" id="send-icon">
+        </button>
+      </div>
+      <div class="footer-branding">
+        <img src="book-icon.svg" alt="Logo" class="footer-logo">
+        <span>Powered by Deep Research</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
