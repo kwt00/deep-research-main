@@ -37,11 +37,16 @@ type ResearchResult = {
 const ConcurrencyLimit = 2;
 
 // Initialize Firecrawl with optional API key and optional base url
-
 const firecrawl = new FirecrawlApp({
   apiKey: process.env.FIRECRAWL_KEY ?? '',
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
+
+// Log environment configuration to help with debugging
+console.log('Environment configuration:');
+console.log('- CONTEXT_SIZE:', process.env.CONTEXT_SIZE || 'Not set');
+console.log('- FIRECRAWL_KEY exists:', !!process.env.FIRECRAWL_KEY);
+console.log('- CUSTOM_MODEL:', process.env.CUSTOM_MODEL || 'Not set');
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({

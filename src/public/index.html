@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deep Research</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
   <div class="container">
@@ -46,7 +48,11 @@
           <div class="progress-bar-container">
             <div id="progress-bar" class="progress-bar"></div>
           </div>
-          <div class="status-time">Time until timeout: <span id="timeout-counter">5:00</span></div>
+          <div class="status-time">
+            <span>Updated: <span id="last-update-time">--:--:--</span></span> | 
+            <span>Time until timeout: <span id="timeout-counter">5:00</span></span>
+          </div>
+          <div id="error-message" class="error-message hidden"></div>
         </div>
 
         <div id="research-results" class="results-container hidden">

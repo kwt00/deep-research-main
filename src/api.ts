@@ -1,8 +1,19 @@
 import cors from 'cors';
 import express, { Request, Response } from 'express';
 import path from 'path';
-import { Server as WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env.local first, then fall back to .env
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+// Log environment variables to verify they're loaded correctly
+console.log('API Server starting with:');
+console.log('- Environment:', process.env.NODE_ENV || 'development');
+console.log('- CONTEXT_SIZE:', process.env.CONTEXT_SIZE || 'Not set');
+console.log('- CUSTOM_MODEL:', process.env.CUSTOM_MODEL || 'Not set');
 
 import { deepResearch, ResearchProgress } from './deep-research';
 
@@ -21,10 +32,10 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 // Store all connected WebSocket clients
-const clients = new Set();
+const clients = new Set<WebSocket>();
 
 // WebSocket connection handler
-wss.on('connection', (ws) => {
+wss.on('connection', (ws: WebSocket) => {
   console.log('New WebSocket client connected');
   clients.add(ws);
 
@@ -34,6 +45,25 @@ wss.on('connection', (ws) => {
     message: 'Connected to Deep Research server'
   }));
 
+  // Handle message from client
+  ws.on('message', async (message) => {
+    try {
+      const data = JSON.parse(message.toString());
+      console.log('Received message:', data);
+      
+      if (data.type === 'research' && data.query) {
+        // Start research process
+        processResearch(data.query, ws);
+      }
+    } catch (error: any) {
+      console.error('Error processing message:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Error processing your request'
+      }));
+    }
+  });
+
   // Handle disconnection
   ws.on('close', () => {
     console.log('WebSocket client disconnected');
@@ -41,20 +71,100 @@ wss.on('connection', (ws) => {
   });
 });
 
+// Process research request
+async function processResearch(query: string, socket: WebSocket) {
+  try {
+    broadcastActivity(`Starting research for: "${query}"`, 'blue');
+    
+    // Run the research process
+    const result = await deepResearch({
+      query,
+      depth: 2,
+      breadth: 3,
+      onProgress: (progress) => {
+        // Update progress
+        broadcastProgress(progress);
+        
+        // Track sources
+        if (progress.url && progress.title) {
+          broadcastSource(progress.url, progress.title);
+        }
+        
+        // Log activity based on stage
+        if (progress.stage === 'generating_queries') {
+          broadcastActivity('Generating search queries...', 'blue');
+        } else if (progress.stage === 'searching') {
+          broadcastActivity(`Searching: ${progress.currentQuery || 'unknown'}`, 'blue');
+        } else if (progress.stage === 'processing_results') {
+          broadcastActivity(`Processing search results: ${progress.percentage}%`, 'blue');
+        } else if (progress.stage === 'generating_answer') {
+          broadcastActivity('Generating final answer...', 'blue');
+        }
+      }
+    });
+
+    // Broadcast completion
+    broadcastActivity('Research completed successfully', 'green');
+    
+    // Send final result to client
+    socket.send(JSON.stringify({
+      type: 'done',
+      result: {
+        query,
+        answer: result.answer || 'No conclusive answer found.',
+        learnings: result.learnings || [],
+        sources: result.visitedUrls || []
+      }
+    }));
+  } catch (error: any) {
+    console.error('Research error:', error);
+    broadcastActivity(`Error: ${error.message}`, 'red');
+    
+    // Send error to client
+    socket.send(JSON.stringify({
+      type: 'error',
+      message: `Research failed: ${error.message}`
+    }));
+  }
+}
+
 // Broadcast progress updates to all connected clients
 function broadcastProgress(progress: ResearchProgress) {
-  const message = JSON.stringify({
-    type: 'progress',
-    progress
-  });
-  
-  clients.forEach(client => {
-    try {
-      if (client.readyState === 1) { // OPEN
-        client.send(message);
+  // Make sure the progress has a percentage value
+  if (progress.percentage === undefined) {
+    // Calculate percentage based on stage if possible
+    if (progress.stage) {
+      const stagePercentages: Record<string, number> = {
+        'starting': 5,
+        'generating_queries': 10,
+        'queries_generated': 15,
+        'searching': 20,
+        'visited_source': 40,
+        'analyzing': 60,
+        'processing_results': 70,
+        'summarizing': 80,
+        'generating_answer': 90,
+        'finishing': 95,
+        'completed': 100
+      };
+      
+      // Use stage percentage if available, otherwise don't modify
+      if (stagePercentages[progress.stage]) {
+        progress.percentage = stagePercentages[progress.stage];
       }
-    } catch (error) {
-      console.error('Error sending message to client:', error);
+    }
+  }
+
+  // Log the progress update for debugging
+  console.log(`Broadcasting progress: ${progress.stage || 'unknown'} - ${progress.percentage || 'unknown'}%`);
+
+  // Send progress update to all connected clients
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'progress',
+        progress
+      }));
     }
   });
 }
@@ -69,7 +179,7 @@ function broadcastActivity(message: string, color: string = 'blue') {
   
   clients.forEach(client => {
     try {
-      if (client.readyState === 1) { // OPEN
+      if (client.readyState === WebSocket.OPEN) {
         client.send(activityMessage);
       }
     } catch (error) {
@@ -88,7 +198,7 @@ function broadcastSource(url: string, title: string) {
   
   clients.forEach(client => {
     try {
-      if (client.readyState === 1) { // OPEN
+      if (client.readyState === WebSocket.OPEN) {
         client.send(sourceMessage);
       }
     } catch (error) {
@@ -99,8 +209,29 @@ function broadcastSource(url: string, title: string) {
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', server: 'Deep Research API' });
+  res.json({
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'development',
+    contextSize: process.env.CONTEXT_SIZE || 'Not set',
+    websocket: wss ? 'active' : 'inactive',
+    clientsConnected: clients.size
+  });
 });
+
+// Apply changes from .env.local - ensure proper loading order
+const updateEnvVars = () => {
+  console.log('Reloading environment variables...');
+  try {
+    // Force reload .env.local
+    dotenv.config({ path: '.env.local', override: true });
+    console.log('Updated CONTEXT_SIZE:', process.env.CONTEXT_SIZE);
+  } catch (error) {
+    console.error('Error reloading environment variables:', error);
+  }
+};
+
+// Check if environment variables changed
+setInterval(updateEnvVars, 60000); // Check every minute
 
 // Research API endpoint
 app.post('/api/research', async (req: Request, res: Response) => {
